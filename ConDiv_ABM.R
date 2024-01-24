@@ -5,6 +5,11 @@
 ## Agent-based simulation model (authored by D.Deffner; email: deffner@mpib-berlin.mpg.de)
 ###########################################################################################
 
+#This script simulates an agent-based model combining migration and conformity and plots the results (Fig.3 in the manuscript)
+
+#Set working directory to GitHub repo
+setwd("~/GitHub/CulturalEvolutionWorkflow")
+
 #Load functions
 library(scales)
 library(RColorBrewer)

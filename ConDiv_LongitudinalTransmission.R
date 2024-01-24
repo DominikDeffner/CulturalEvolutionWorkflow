@@ -6,7 +6,10 @@
 ###########################################################################################
 
 #This script simulates longitudinal data on cultural traits and social networks for hypothetical participants
-#It then fits a time-series transmission model in stan and plots the results
+#It then fits a time-series transmission model in stan and plots the results (Fig.4 in the manuscript)
+
+#Set working directory to GitHub repo
+setwd("~/GitHub/CulturalEvolutionWorkflow")
 
 #Load functions
 library(scales)
