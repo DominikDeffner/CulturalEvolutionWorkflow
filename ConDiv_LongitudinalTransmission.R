@@ -6,10 +6,7 @@
 ###########################################################################################
 
 #This script simulates longitudinal data on cultural traits and social networks for hypothetical participants
-#It then fits a time-series transmission model in stan and plots the results (Fig.4 in the manuscript)
-
-#Set working directory to GitHub repo
-setwd("~/GitHub/CulturalEvolutionWorkflow")
+#It then fits a time-series transmission model in stan and plots the results
 
 #Load functions
 library(scales)
@@ -48,7 +45,7 @@ N_per_group = N/N_groups
 N_steps = 30    #Number of time steps
 N_burn_in = 1000 #Number of time steps to get equilibrium age structure
 N_skip = 100     #Number of time steps before we record choices for analysis
-N_mod = 10       #Number of role models
+N_mod = 30       #Number of role models
 m_NL = TRUE      #If TRUE, we take real migration rates from NL; if FALSE corresponding "effective" mig. rate
 m_const = 0.01
 mu = 0.1        #Innovation rate (fraction of learning events that are innovations)
@@ -105,7 +102,7 @@ Counter <- max(unique_per_group)
 #Initialize data objects
 #How many individuals to record data from
 
-N_record = 200
+N_record = 500
 
 #Traits
 dat_trait  <- matrix(NA, nrow = N_record, ncol = N_steps)
@@ -367,13 +364,238 @@ stan.data$N_id <- length(unique(stan.data$id))
 stan.data$N_groups <- length(unique(stan.data$group))
 
 
-#save(stan.data, file = "standata211123")
-
 
 library(rethinking)
 #Baseline Multilevel Experience-weighted attraction model
 m <- stan( file="Longitudinal_Conf.stan" , data=stan.data , chains=4, cores=4,refresh = 1, iter = 3000, control = list(adapt_delta=0.8, max_treedepth = 13))       
 s <- extract.samples(m)
+
+
+#####
+## Simulate with posterior estimates and compute causal effects
+#####
+
+#Define constant parameter values (i.e., parameters we do not perform a sweep for)
+N = 3000         #Number of agents
+N_groups = 30    #Number of groups
+N_per_group = N/N_groups
+N_burn_in = 1000 #Number of time steps to get equilibrium age structure
+max_age <- 90     #Maximum Age
+N_mod = 30       #Number of role models
+m_NL = TRUE     #If TRUE, we take real migration rates from NL; if FALSE corresponding "effective" mig. rate
+size_grid = 50   #Grid size for spatially-explicit model with local migration
+r_dist  = 0      #Effect of distance on migration (if r_dist = 0, migrants choose village randomly)
+r_learn = 0.03    #Decay rate for learning
+r_mort  = 0.001   #Decay rate for survival
+
+#Define parameter grid to loop over for sweep
+
+seq<-data.frame(sample = sample(1:length(s$lp__), 1500, FALSE), m_in = c(rep(0, 500), rep(0.2, 500),  rep(-0.2, 500)) )
+
+#Define simulation function
+sim.funct <- function(N_steps, Nsim, sample, m_in){
+  
+  #Overall output file
+  Combined_list <- list()
+  
+  #Loop over independent simulations
+  for (sim in 1:Nsim) {
+    
+    #Assign parameter values from the posterior distribution
+    theta <- exp(s$log_theta[sample])
+    mu = inv_logit(s$logit_mu[sample])
+    m <- inv_logit(s$age_effects[sample,]) + m_in
+    
+    #Create rectangular grid for villages, we try to make it spatially explicit
+    grid <- matrix(0, nrow = size_grid, ncol = size_grid)
+    
+    # Now let's populate the grid with villages
+    Locations <- sample(size_grid * size_grid, size = N_groups)
+    grid[Locations] <- sample(N_groups)
+    
+    # Create (Euclidian) distance matrix between villages
+    
+    #Distance matrix
+    dist <- matrix(0, nrow = N_groups, ncol = N_groups)
+    for (x in 1:N_groups) {
+      for (y in 1:N_groups) {
+        dist[x,y] <- sqrt( (which(grid == x, arr.ind = TRUE)[1] - which(grid == y, arr.ind = TRUE)[1])^2 +
+                             (which(grid == x, arr.ind = TRUE)[2] - which(grid == y, arr.ind = TRUE)[2])^2 )
+      }
+    }
+    
+    # Initialize population; we just keep track of personal id, group id and conformity exponent per individual
+    Age <- sample(1:80, N, replace = TRUE)
+    group <- rep(1:N_groups,each= N_per_group)
+    
+    #Initialize cultural traits
+    Traits <- rep(0, N)
+    
+    #Unique variant per group
+    unique_per_group <- sample(1:N_groups,  replace = FALSE)
+    for (g in 1:N_groups) Traits[group == g] <- unique_per_group[g]
+    
+    #Counter for cultural variants to make sure innovation actually produces new variant
+    Counter <- max(unique_per_group)
+    
+    #Vector to store cultural Fst values
+    Diversity <- rep(0,N_steps )
+    
+    #Loop over years (we first use N_burn_in time steps to reach demographic equilibrium)
+    for (t in 1: (N_burn_in + N_steps ) ){
+      print(t)
+      # 1) Demographics
+      # a) Birth-death process
+      for (g in 1:N_groups){
+        idx_group <- which(group == g)
+        
+        #Create survivors
+        alive <- rbinom(N_per_group , 1, f_age(FALSE, r_mort, Age[idx_group]) )
+        
+        #Limit life span to maximal age
+        alive[which(Age[idx_group] == max_age)] <- 0
+        
+        #Select to fill empty slots
+        babies  <- which(alive == 0)
+        parents <- sample(which(alive == 1 & Age[idx_group] >= 18), length(babies), replace = TRUE)
+        
+        #Children copy traits of their parents
+        Traits[idx_group[babies]] <- Traits[idx_group[parents] ]
+        
+        #Set children ages to 1 and increase rest by 1
+        Age[idx_group[babies]] <- 1
+        Age[idx_group[-babies]] <- Age[idx_group[-babies]] + 1
+      }
+      
+      #If we're past the burn in, we include migration and cultural transmission
+      if (t > N_burn_in){
+        
+        # b) Migration
+        #Create pool of migrants, according to (age-specific) migration rates
+        migrate <- rbinom(N , 1, m[Age] )
+        Migrants <- sample(which(migrate==1))
+        
+        #How many spots are available in each group
+        Spots_per_group <- sapply(1:N_groups, function(i) length(which(group[Migrants] == i) ))
+        
+        #Vector to store new group id for each migrant
+        new_group <- rep(0, length(Migrants))
+        
+        #If there are migrants, loop over them
+        if (length(Migrants) > 0){
+          for (i in Migrants)  {
+            #Which groups are already full
+            full <- which(Spots_per_group == 0)
+            
+            #If only one group is left, choose this one
+            if (length(full) == (N_groups-1)){
+              new <- which(Spots_per_group > 0)
+              
+              #Otherwise, choose one group depending on distance
+            }else{
+              probs <- exp(-r_dist * dist[group[i],])
+              
+              #Set prob for own group and for full groups to 0
+              probs[full] <- 0
+              probs[group[i]] <- 0
+              probs <- probs/sum(probs)
+              
+              #Sample new group
+              new <- sample((1:N_groups), 1, prob = probs )
+            }
+            
+            #Assign new group for migrant and reduce number of free spots
+            new_group[which(Migrants == i)] <- new
+            Spots_per_group[new] <- Spots_per_group[new]-1
+          }
+          
+          #Assign new groups
+          group[Migrants] <- new_group
+        }
+        # 2) Cultural Transmission
+        
+        #Create pool of learners
+        Learners <- which( rbinom(N , 1, f_age(FALSE, r_learn, Age) ) == 1 )
+        
+        #Create vector for new variants
+        Traits_new <- rep(0, length(Learners))
+        
+        #Loop over all learners
+        for (i in Learners) {
+          
+          #Sample models
+          Model_ids <- sample(which(group == group[i]), N_mod)
+          
+          #Vector with unique variants
+          Variants <- unique(Traits[Model_ids])
+          
+          #Frequency of each variant
+          Freq_Variants <- c()
+          for (x in Variants) Freq_Variants[which(Variants == x)] <- length(which(Traits[Model_ids] == x))
+          
+          #Probability individuals choose each variant
+          prob <- Freq_Variants^theta/ sum(Freq_Variants^theta)
+          
+          #Innovate new trait with probability mu
+          if (runif(1)<mu){
+            Traits_new[which(Learners == i)] <- Counter + 1
+            
+            #Update counter
+            Counter <- Counter + 1
+            
+            #Socially learn with probability 1-mu
+          } else {
+            if (length(Variants) == 1 ){
+              Traits_new[which(Learners == i)] <- Variants
+            } else {
+              Traits_new[which(Learners == i)] <- sample(Variants, size = 1, prob = prob)
+            }
+          }
+        }#i
+        
+        #Replace old by new cultural traits
+        Traits[Learners] <- Traits_new
+        
+        #Quantify diversity (based on Mesoudi, 2018, Migration, acculturation, and the maintenance of between-group cultural variation)
+        J <- unique(Traits)
+        frequencies <- matrix(0, nrow = N_groups, ncol = length(J))
+        for (g in 1:N_groups) frequencies[g,] <- sapply(J, function(j) length(which(Traits[which(group==g)] == j)) / N_per_group )
+        
+        total.var <- 1 - sum(colMeans(frequencies)^2)  # 1 - sum of squared means of each trait
+        within.var <- mean(1 - rowSums(frequencies^2)) # mean of each group's (1 - the sum of squared freq of each trait)
+        
+        Diversity[t- N_burn_in] <- (total.var - within.var) / total.var
+        
+      }
+      
+    }#t
+    
+    Combined_list[[sim]]<- Diversity
+    
+  }#nsim
+  return(Combined_list)
+  
+}#end function
+
+
+result <- mclapply( 1:nrow(seq), function(i) sim.funct(300, 1, seq$sample[i], seq$m_in[i]),mc.cores=100)
+
+emp <- c()
+for (i in 1:500) {
+  emp <- c(emp, result[[i]][[1]][-(1:100)] )
+}
+
+
+high <- c()
+for (i in 501:1000) {
+  high <- c(high, result[[i]][[1]][-(1:100)] )
+}
+
+low <- c()
+for (i in 1001:1500) {
+  low <- c(low, result[[i]][[1]][-(1:100)] )
+}
+
 
 
 ###
@@ -382,13 +604,21 @@ s <- extract.samples(m)
 ##
 ###
 
+
+#graphics.off()
+
+#pdf("TimeSeries.pdf", width = 12, height = 4)
+#Crete color palette
+col.pal <- brewer.pal(9, "Set1")
+
 #Crete color palette
 par( mar = c(3,1.5,0,0.5), oma = c(1,2.5,2.5,0))
 
-layout(matrix(c(1,1,1,1,
-                2,2,   #gap
-                3,3,
-                4,4,4,4), 1, 12, byrow = TRUE))
+layout(matrix(c(1,1,
+                2,  #gap
+                3,
+                4,4,
+                5,5), 1, 8, byrow = TRUE))
 
 
 keep[which(keep == -10)] <- 1
@@ -398,8 +628,8 @@ group[which(group == -10)] <- group[which(group == -10)+1]
 col.pal <- colorRampPalette(brewer.pal(9, "Set1"))(N_groups)
 
 #Time series of data
-plot(1:30, xlim = c(1,30), ylim = c(1,stan.data$N_id), type = "n", ylab = "", xlab = "n")
-for (i in 1:stan.data$N_id) {
+plot(1:30, xlim = c(1,30), ylim = c(1,100), type = "n", ylab = "", xlab = "n")
+for (i in 1:100) {
   time <- max(which(keep[which(id == i)]==1))
   lines(1:time, rep(i, time), pch = 16, cex = 0.5, col = alpha("black", alpha=0.3))
   points(1:time, rep(i, time), pch = 16, cex = 0.5, col = alpha(col.pal[ group[which(id == i)][1:time] ], alpha=0.5))
@@ -413,7 +643,7 @@ post <- inv_logit(s$logit_mu )
 dens <- density(post)
 x1 <- min(which(dens$x >= quantile(post, 0.05)))  
 x2 <- max(which(dens$x <  quantile(post, 0.95)))
-plot(dens, xlim = c(0.07,0.13), ylim = c(0,100), type="n", ann = FALSE, bty = "n", yaxt = "n")
+plot(dens, xlim = c(0.08,0.12), ylim = c(0,120), type="n", ann = FALSE, bty = "n", yaxt = "n", ylab = "n")
 with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[1],alpha = 0.9), border = NA))
 
 x1 <- min(which(dens$x >= quantile(post, 0)))  
@@ -456,4 +686,36 @@ lines(age_mig_NL[2:MA], col = "black", lty = 2, lwd = 2)
 mtext(side = 1, "Age", line = 2.5, cex = 1)
 mtext(side = 2, "Migration rate", line = 2.5, cex = 1)
 mtext('c', side=3, line=1, at=-5)
+
+
+contrast <- high-emp
+dens <- density(contrast)
+x1 <- min(which(dens$x >= quantile(contrast, 0.05)))  
+x2 <- max(which(dens$x <  quantile(contrast, 0.95)))
+plot(dens, xlim = c(-0.6, 0.6), ylim = c(0,30), type="n", ann = FALSE, bty = "n", yaxt = "n")
+with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[5],alpha = 0.9), border = NA))
+
+x1 <- min(which(dens$x >= quantile(contrast, 0)))  
+x2 <- max(which(dens$x <  quantile(contrast, 1)))
+with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[5],alpha = 0.2), border = NA))
+
+contrast <- low-emp
+dens <- density(contrast)
+x1 <- min(which(dens$x >= quantile(contrast, 0.05)))  
+x2 <- max(which(dens$x <  quantile(contrast, 0.95)))
+par(new = TRUE)
+plot(dens, xlim = c(-0.6, 0.6), ylim = c(0,30), type="n", ann = FALSE, bty = "n", yaxt = "n")
+with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[6],alpha = 0.9), border = NA))
+
+x1 <- min(which(dens$x >= quantile(contrast, 0)))  
+x2 <- max(which(dens$x <  quantile(contrast, 1)))
+with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[6],alpha = 0.2), border = NA))
+
+abline(v = 0, lty = 2, col = "lightgrey")
+text(-0.2, 28, "+20% \n migration", cex = 1.5, col = col.pal[5])
+text(0.2, 28, "-20% \n migration", cex = 1.5, col = col.pal[6])
+mtext(side = 1, line = 2.5, "M -> CFst")
+mtext('d', side=3, line=1, at=-0.6)
+
+#dev.off()
 

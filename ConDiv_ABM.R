@@ -5,11 +5,6 @@
 ## Agent-based simulation model (authored by D.Deffner; email: deffner@mpib-berlin.mpg.de)
 ###########################################################################################
 
-#This script simulates an agent-based model combining migration and conformity and plots the results (Fig.3 in the manuscript)
-
-#Set working directory to GitHub repo
-setwd("~/GitHub/CulturalEvolutionWorkflow")
-
 #Load functions
 library(scales)
 library(RColorBrewer)
@@ -98,7 +93,7 @@ sim.funct <- function(N_steps, Nsim, theta, const_m){
     
     #Loop over years (we first use N_burn_in time steps to reach demographic equilibrium)
     for (t in 1: (N_burn_in + N_steps ) ){
-      
+      print(t)
       # 1) Demographics
       # a) Birth-death process  
       for (g in 1:N_groups){
@@ -246,68 +241,49 @@ result <- mclapply( 1:nrow(seq), function(i) sim.funct(seq$N_steps[i], seq$Nsim[
 ##
 ###
 
+#graphics.off()
+
+pdf("Abstract_ABM.pdf", width = 11, height = 4)
 #Crete color palette
 col.pal <- brewer.pal(9, "Set1")
 
-par( mar = c(4,4,0,0), oma = c(0,0,2.5,4))
+par( mar = c(4,4,0,0), oma = c(0,0,2.5,1))
+layout(matrix(c(1,1,2,2,2,3,3), 1, 7, byrow = TRUE))
 
-layout(matrix(c(1,1,2,2,3,3,3), 1, 7, byrow = TRUE))
+param_combi <- which(seq$theta == 1 & seq$const_m == 0)
 
-param_combi <- which(seq$theta == 0.8 & seq$const_m == 0)
+t_plot <- 100
 
-plot(result[[param_combi]][[1]], type = "n", ylim = c(0,1), xlab = "", ylab = "")
+plot(result[[param_combi]][[1]][1:t_plot], type = "n", ylim = c(0,1), xlab = "", ylab = "")
 for (i in 1:unique(seq$Nsim)) {
-  lines(result[[param_combi]][[i]], col = alpha(col.pal[1], alpha = 0.3))
+  lines(result[[param_combi]][[i]][1:t_plot], col = alpha(col.pal[1], alpha = 0.3))
 }
-
-param_combi <- which(seq$theta == 1& seq$const_m == 0)
-for (i in 1:unique(seq$Nsim)) {
-  lines(result[[param_combi]][[i]], col = alpha(col.pal[2], alpha = 0.3))
-}
+text(70, 0.3, "no migration \n unbiased", cex = 1, col = col.pal[1])
 
 param_combi <- 3
 for (i in 1:unique(seq$Nsim)) {
-  lines(result[[param_combi]][[i]], col = alpha(col.pal[3], alpha = 0.3))
+  lines(result[[param_combi]][[i]][1:t_plot], col = alpha(col.pal[2], alpha = 0.3))
 }
+text(70, 0.9, "no migration \n weak conformity", cex = 1, col = col.pal[2])
 
-param_combi <- which(seq$theta == 2& seq$const_m == 0)
+#m=0.1
+param_combi <- 113
 for (i in 1:unique(seq$Nsim)) {
-  lines(result[[param_combi]][[i]], col = alpha(col.pal[4], alpha = 0.3))
+  lines(result[[param_combi]][[i]][1:t_plot], col = alpha(col.pal[3], alpha = 0.3))
 }
+text(70, 0.01, "migration \n weak conformity", cex = 1, col = col.pal[3])
+
+
+param_combi <- 115
+for (i in 1:unique(seq$Nsim)) {
+  lines(result[[param_combi]][[i]][1:t_plot], col = alpha(col.pal[4], alpha = 0.3))
+}
+text(70, 0.5, "migration \n strong conformity", cex = 1, col = col.pal[4])
 
 mtext(side = 1, line = 2.5, "Simulation Year")
-mtext(side = 2, line = 2.5, "Cultural Fixation Index")
-mtext(side = 3, line = 0.5, "Without migration (m=0)")
-mtext('a', side=3, line=1, at=-40)
-
-m = 0.2
-param_combi <- which(seq$theta == 0.8& seq$const_m == m)
-
-plot(result[[param_combi]][[1]], type = "n", ylim = c(0,1), xlab = "", ylab = "")
-for (i in 1:unique(seq$Nsim)) {
-  lines(result[[param_combi]][[i]], col = alpha(col.pal[1], alpha = 0.3))
-}
-
-param_combi <- which(seq$theta == 1& seq$const_m == m)
-for (i in 1:unique(seq$Nsim)) {
-  lines(result[[param_combi]][[i]], col = alpha(col.pal[2], alpha = 0.3))
-}
-
-param_combi <- param_combi+1
-for (i in 1:unique(seq$Nsim)) {
-  lines(result[[param_combi]][[i]], col = alpha(col.pal[3], alpha = 0.3))
-}
-
-param_combi <- which(seq$theta == 2.0& seq$const_m == m)
-for (i in 1:unique(seq$Nsim)) {
-  lines(result[[param_combi]][[i]], col = alpha(col.pal[4], alpha = 0.3))
-}
-
-mtext(side = 1, line = 2.5, "Simulation Year")
-mtext(side = 2, line = 2.5, "Cultural Fixation Index")
-mtext(side = 3, line = 0.5, "With migration (m=0.2)")
-mtext('b', side=3, line=1, at=-40)
-legend("topright", title = expression("Conformity exp."), c("0.8","1", "1.2", "2"), col = c(col.pal[1],col.pal[2],col.pal[3],col.pal[4]), cex = 1,bty = "n", lwd = 4, lty = 1)
+mtext(side = 2, line = 2.5, "Cultural Fst")
+mtext(side = 3, line = 0.5, "Simulation Dynamics" )
+mtext('a', side=3, line=1, at=1)
 
 # Remove first 100 timesteps and calculate mean for each parameter combination
 MeanFst <- matrix(NA, nrow = nrow(seq), ncol = unique(seq$Nsim) )
@@ -332,12 +308,88 @@ axis(side=1, at=seq(1,12,1), labels=unique(seq$theta[which(seq$theta <= 3)]) )
 axis(side=2, at=seq(1,21,4), labels=unique(seq$const_m)[seq(1,21,4)]) 
 rect(1.5, 0.5, 2.5, 21.5, density = NA, col = alpha("grey", alpha = 0), border = "black", lwd = 3)
 
-mtext(side = 2, line = 2.5, "Annual migration rate" )
-mtext(side = 1, line = 2.5, "Strength of (anti-)conformity")
-text(2, 10,"Unbiased transmission", cex = 1.5, srt = 90)
-mtext('c', side=3, line=1, at=0)
+mtext(side = 2, line = 2.5, "Migration rate" )
+mtext(side = 3, line = 0.5, "Cultural Fst per parameter combination")
 
+mtext(side = 1, line = 2.5, "Conformity exponent")
+text(2, 10,"Unbiased transmission", cex = 1.5, srt = 90)
+mtext('b', side=3, line=1, at=0)
+
+#Causal effects
+par( mar = c(4,4,0,0))
+theta <- 1
+low_mig <- which(seq$const_m == 0.1 & seq$theta == theta)
+high_mig <- which(seq$const_m == 0.2 & seq$theta == theta)
+
+low <- c()
+for (i in low_mig) low <- c(low, unlist(result[[i]]) )
+
+high <- c()
+for (i in high_mig) high <- c(high, unlist(result[[i]]) )
+
+contrast <- high-low
+dens <- density(contrast)
+x1 <- min(which(dens$x >= quantile(contrast, 0.05)))  
+x2 <- max(which(dens$x <  quantile(contrast, 0.95)))
+plot(dens, xlim = c(-0.4, 0), ylim = c(0,200), type="n", ann = FALSE, bty = "n", yaxt = "n")
+with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[1],alpha = 0.9), border = NA))
+
+x1 <- min(which(dens$x >= quantile(contrast, 0)))  
+x2 <- max(which(dens$x <  quantile(contrast, 1)))
+with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[1],alpha = 0.2), border = NA))
+
+theta <- 1.6
+low_mig <- which(seq$const_m == 0.1 & seq$theta == theta)
+high_mig <- which(seq$const_m == 0.2 & seq$theta == theta)
+
+low <- c()
+for (i in low_mig) low <- c(low, unlist(result[[i]]) )
+
+high <- c()
+for (i in high_mig) high <- c(high, unlist(result[[i]]) )
+
+contrast <- high-low
+dens <- density(contrast)
+x1 <- min(which(dens$x >= quantile(contrast, 0.05)))  
+x2 <- max(which(dens$x <  quantile(contrast, 0.95)))
+par(new = TRUE)
+plot(dens, xlim = c(-0.4, 0), ylim = c(0,20), type="n", ann = FALSE, bty = "n", yaxt = "n")
+with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[2],alpha = 0.9), border = NA))
+
+x1 <- min(which(dens$x >= quantile(contrast, 0)))  
+x2 <- max(which(dens$x <  quantile(contrast, 1)))
+with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[2],alpha = 0.2), border = NA))
+
+theta <- 2
+low_mig <- which(seq$const_m == 0.1 & seq$theta == theta)
+high_mig <- which(seq$const_m == 0.2 & seq$theta == theta)
+
+low <- c()
+for (i in low_mig) low <- c(low, unlist(result[[i]]) )
+
+high <- c()
+for (i in high_mig) high <- c(high, unlist(result[[i]]) )
+
+contrast <- high-low
+dens <- density(contrast)
+x1 <- min(which(dens$x >= quantile(contrast, 0.05)))  
+x2 <- max(which(dens$x <  quantile(contrast, 0.95)))
+par(new = TRUE)
+plot(dens, xlim = c(-0.4, 0), ylim = c(0,30), type="n", ann = FALSE, bty = "n", yaxt = "n")
+with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[3],alpha = 0.9), border = NA))
+
+x1 <- min(which(dens$x >= quantile(contrast, 0)))  
+x2 <- max(which(dens$x <  quantile(contrast, 1)))
+with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[3],alpha = 0.2), border = NA))
+
+legend("top", title = expression("Conformity exp."), c("1","1.6","2"), col = c(col.pal[1],col.pal[2],col.pal[3]), cex = 1.2,bty = "n", lwd = 6, lty = 1)
+mtext(side = 1, line = 2.5, "M -> CFst")
+mtext(side = 3, line = 0.5, "Causal Effects" )
+mtext('c', side=3, line=1, at=0)
+abline(v = 0, lty = 2, col = "lightgrey")
 par(fig = c(0, 1, 0, 1), oma = c(0, 0, 0, 0), mar = c(0, 0, 0, 0), new = TRUE)
 plot(0, 0, type = "n", bty = "n", xaxt = "n", yaxt = "n")
-legend("right", c("1","", "0.9","", "0.8","", "0.7","","0.6","","0.5","","0.4","","0.3","","0.2","","0.1", "","0"), col= heat.colors(1000)[c(1,50,100,150,200,250, 300,350,400,450,500,550,600,650,700,750,800,850,900,950, 1000)], xpd = TRUE, inset = c(0, 0), bty = "n", pch=15,cex = 1.2, pt.cex = 3.2)
+legend(0.45, 0.9, c("1","", "0.9","", "0.8","", "0.7","","0.6","","0.5","","0.4","","0.3","","0.2","","0.1", "","0"), col= heat.colors(1000)[c(1,50,100,150,200,250, 300,350,400,450,500,550,600,650,700,750,800,850,900,950, 1000)], xpd = TRUE, inset = c(0, 0), bty = "n", pch=15,cex = 1.1, pt.cex = 3.2)
+
+#dev.off()
 

@@ -1,8 +1,6 @@
 
-// Deffner, D., Fedorova, N., Andrews, J. & McElreath, R.
-// Bridging theory and data: A computational workflow for cultural evolution
-// Longitudinal transmission analysis to infer conformity, innovation and age-dependent migration (authored by D.Deffner; email: deffner@mpib-berlin.mpg.de)
-
+//Multilevel time-series model to infer innovation rate, age-specific migration rates and conformity
+//written by D.Deffner, 2024 (deffner@mpib-berlin.mpg.de)
 
 functions{
 //Function for Gaussian Process kernel
@@ -28,12 +26,12 @@ data{
    int N;              //Number of observations 
    int N_id;           //Number of individuals
    int N_groups;       //Number of groups
-   int N_partners;     //Number of interaction partners
+   int N_partners;    //Number of interaction partners
    int N_alt[N];       //Number of available traits for each choice
    int id[N];          //Unique individual identification
    int group[N];       //Group ID
    int age[N];         //Age
-   int Max_age;        //maximum age
+   int Max_age;       //maximum age
    int choices[N];     //Chosen trait
    int innovate[N];    //Does individual have a new variant?
    int migrate[N];    //Did individual migrate since the last timestep?
@@ -86,9 +84,9 @@ model{
    log_theta ~ normal(0,1);
    
    //Gaussian process on migration rate
-  eta ~ exponential(100);
+  eta ~ exponential(3);
   sigma ~ exponential(1);
-  rho ~ beta(300, 1);
+  rho ~ beta(30, 1);
 
   //Varying effects priors
   to_vector(z_ID) ~ normal(0,1);
