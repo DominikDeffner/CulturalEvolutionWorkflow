@@ -84,7 +84,7 @@ N = length(s$sigma)
 Causal_effect <- matrix(NA, 3,N)
 for (i in 1:3) {
   C <- c(-1, 0, 1)[i]
-  Causal_effect[i,] <- rnorm(N, s$a + + s$bcd*C + s$bmd * 1, s$sigma) - rnorm(N, s$a+ s$bcd*C + s$bmd * (-1), s$sigma)
+  Causal_effect[i,] <- rnorm(N, s$a + s$bcd*C + s$bmd * 1, s$sigma) - rnorm(N, s$a+ s$bcd*C + s$bmd * (-1), s$sigma)
 }
 
 col.pal <- brewer.pal(9, "Set1")
