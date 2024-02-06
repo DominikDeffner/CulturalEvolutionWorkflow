@@ -65,9 +65,8 @@ levelplot(m, xlab = "Unexplained variance (Sigma)", ylab ="Effect of migration [
 ###### CAUSAL EFFECT ####
 ##### Here, we use MCMC with stan through the rethinking package
 
-dat <- sim_dat(1, 1)  #Simulate data
+dat <- sim_dat(1, 1)
 
-#Fit model in Bayesian way
 m <- ulam(
   alist(
     D ~ dnorm( mu , sigma ) ,
@@ -75,8 +74,6 @@ m <- ulam(
     c(a,bmd,bcd) ~ dnorm( 0 , 1 ) ,
     sigma ~ dexp( 1 )
   ) , data=dat , chains=4, iter = 3000 )
-
-#Extract samples
 s <- extract_post_ulam(m)
 
 #Compute causal effect of migration on diversity
@@ -84,9 +81,10 @@ N = length(s$sigma)
 Causal_effect <- matrix(NA, 3,N)
 for (i in 1:3) {
   C <- c(-1, 0, 1)[i]
-  Causal_effect[i,] <- rnorm(N, s$a + s$bcd*C + s$bmd * 1, s$sigma) - rnorm(N, s$a+ s$bcd*C + s$bmd * (-1), s$sigma)
+  Causal_effect[i,] <- rnorm(N, s$a+ s$bcd*C + s$bmd * 1, s$sigma) - rnorm(N, s$a+ s$bcd*C + s$bmd * (-1), s$sigma)
 }
 
+par(mar = c(2,0,0,0), oma = rep(1,4))
 col.pal <- brewer.pal(9, "Set1")
 dens <- density(Causal_effect[1,])
 x1 <- min(which(dens$x >= quantile(Causal_effect[1,], 0.05)))  
@@ -119,4 +117,3 @@ abline(v = 0, lty = 2, col = "lightgrey")
 legend("topleft", title = expression("Level of Conformity"), c("-1","0","1"), col = c(col.pal[1],col.pal[2],col.pal[3]), cex = 1.2, bty = "n", lwd = 6, lty = 1)
 mtext(side = 1, line = 2, "M -> D", cex = 1.2)
 mtext(side = 3, line = 1, "Causal Effects", cex = 1.2)
-
