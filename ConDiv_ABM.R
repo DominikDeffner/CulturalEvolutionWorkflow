@@ -241,7 +241,7 @@ result <- mclapply( 1:nrow(seq), function(i) sim.funct(seq$N_steps[i], seq$Nsim[
 ##
 ###
 
-#graphics.off()
+graphics.off()
 
 pdf("Abstract_ABM.pdf", width = 11, height = 4)
 #Crete color palette
@@ -385,11 +385,11 @@ with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.p
 legend("top", title = expression("Conformity exp."), c("1","1.6","2"), col = c(col.pal[1],col.pal[2],col.pal[3]), cex = 1.2,bty = "n", lwd = 6, lty = 1)
 mtext(side = 1, line = 2.5, "M -> CFst")
 mtext(side = 3, line = 0.5, "Causal Effects" )
-mtext('c', side=3, line=1, at=0)
+mtext('c', side=3, line=1, at=-0.4)
 abline(v = 0, lty = 2, col = "lightgrey")
 par(fig = c(0, 1, 0, 1), oma = c(0, 0, 0, 0), mar = c(0, 0, 0, 0), new = TRUE)
 plot(0, 0, type = "n", bty = "n", xaxt = "n", yaxt = "n")
 legend(0.45, 0.9, c("1","", "0.9","", "0.8","", "0.7","","0.6","","0.5","","0.4","","0.3","","0.2","","0.1", "","0"), col= heat.colors(1000)[c(1,50,100,150,200,250, 300,350,400,450,500,550,600,650,700,750,800,850,900,950, 1000)], xpd = TRUE, inset = c(0, 0), bty = "n", pch=15,cex = 1.1, pt.cex = 3.2)
 
-#dev.off()
+dev.off()
 
