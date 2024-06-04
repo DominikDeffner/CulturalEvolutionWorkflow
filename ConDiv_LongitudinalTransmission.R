@@ -612,7 +612,7 @@ for (i in 1001:1500) {
 col.pal <- brewer.pal(9, "Set1")
 
 #Crete color palette
-par( mar = c(3,1.5,0,0.5), oma = c(1,2.5,2.5,0))
+par( mar = c(3,1.5,0,0.5), oma = c(1.25,2.5,2.5,0))
 
 layout(matrix(c(1,1,
                 2,  #gap
@@ -635,7 +635,7 @@ for (i in 1:100) {
   points(1:time, rep(i, time), pch = 16, cex = 0.5, col = alpha(col.pal[ group[which(id == i)][1:time] ], alpha=0.5))
 }
 
-mtext(side = 1, "Year", line = 2.5, cex = 1)
+mtext(side = 1, "Year", line = 3, cex = 1)
 mtext(side = 2, "Participant ID", line = 2.5, cex = 1)
 mtext('a', side=3, line=1, at=-1)
 
@@ -651,14 +651,14 @@ x2 <- max(which(dens$x <  quantile(post, 1)))
 with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[1],alpha = 0.2), border = NA))
 
 abline(v = mu, lty = 2, col = "black", lwd = 2)
-mtext(side = 1, "Innovation rate", line = 2.5, cex = 1)
+mtext(expression(paste("Innovation rate ",italic(mu))),side = 1, line = 3, cex = 1)
 mtext('b', side=3, line=1, at=0.07)
 
 post <- exp(s$log_theta)
 dens <- density(post)
 x1 <- min(which(dens$x >= quantile(post, 0.05)))  
 x2 <- max(which(dens$x <  quantile(post, 0.95)))
-plot(dens, xlim = c(2.5,4), ylim = c(0,5), type="n", ann = FALSE, bty = "n", yaxt = "n")
+plot(dens, xlim = c(2.5,4.5), ylim = c(0,5), type="n", ann = FALSE, bty = "n", yaxt = "n")
 with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[1],alpha = 0.9), border = NA))
 
 x1 <- min(which(dens$x >= quantile(post, 0)))  
@@ -666,10 +666,10 @@ x2 <- max(which(dens$x <  quantile(post, 1)))
 with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[1],alpha = 0.2), border = NA))
 
 abline(v = f, lty = 2, col = "black", lwd = 2)
-mtext(side = 1, "Conformity exp.", line = 2.5, cex = 1)
+mtext(expression(paste("Conformity exp. ",italic(theta))),side = 1, line = 3, cex = 1)
 
 MA <- stan.data$Max_age
-plot(1:MA, type="n", ylim = c(0,0.8))
+plot(1:MA, type="n", ylim = c(0,0.8), xlab = "", ylab = "")
 
 lower <- inv_logit( sapply(1:MA, function(i) HPDI(s$age_effects[,i],0.9))[1,])
 upper <- inv_logit( sapply(1:MA, function(i) HPDI(s$age_effects[,i],0.9))[2,])
@@ -683,8 +683,8 @@ polygon(c(1:MA,MA:1), c(upper, rev(lower)), col=alpha(col.pal[1],alpha = 0.2), b
 
 lines(age_mig_NL[2:MA], col = "black", lty = 2, lwd = 2)
 
-mtext(side = 1, "Age", line = 2.5, cex = 1)
-mtext(side = 2, "Migration rate", line = 2.5, cex = 1)
+mtext(side = 1, "Age", line = 3, cex = 1)
+mtext(expression(paste("Migration rate ",italic(m))), side = 2, line = 2, cex = 1)
 mtext('c', side=3, line=1, at=-5)
 
 
@@ -714,7 +714,7 @@ with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.p
 abline(v = 0, lty = 2, col = "lightgrey")
 text(-0.2, 28, "+20% \n migration", cex = 1.5, col = col.pal[5])
 text(0.2, 28, "-20% \n migration", cex = 1.5, col = col.pal[6])
-mtext(side = 1, line = 2.5, "M -> CFst")
+mtext(expression("M -> CF"[ST]),side = 1, line = 3)
 mtext('d', side=3, line=1, at=-0.6)
 
 #dev.off()
