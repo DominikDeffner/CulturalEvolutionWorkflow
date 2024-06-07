@@ -390,7 +390,7 @@ r_mort  = 0.001   #Decay rate for survival
 
 #Define parameter grid to loop over for sweep
 
-seq<-data.frame(sample = sample(1:length(s$lp__), 1500, FALSE), m_in = c(rep(0, 500), rep(0.2, 500),  rep(-0.2, 500)) )
+seq<-data.frame(sample = sample(1:length(s$lp__), 300, FALSE), m_in = c(rep(0, 100), rep(0.05, 100),  rep(-0.05, 100)) )
 
 #Define simulation function
 sim.funct <- function(N_steps, Nsim, sample, m_in){
@@ -581,18 +581,18 @@ sim.funct <- function(N_steps, Nsim, sample, m_in){
 result <- mclapply( 1:nrow(seq), function(i) sim.funct(300, 1, seq$sample[i], seq$m_in[i]),mc.cores=100)
 
 emp <- c()
-for (i in 1:500) {
+for (i in 1:100) {
   emp <- c(emp, result[[i]][[1]][-(1:100)] )
 }
 
 
 high <- c()
-for (i in 501:1000) {
+for (i in 101:200) {
   high <- c(high, result[[i]][[1]][-(1:100)] )
 }
 
 low <- c()
-for (i in 1001:1500) {
+for (i in 201:300) {
   low <- c(low, result[[i]][[1]][-(1:100)] )
 }
 
@@ -692,7 +692,7 @@ contrast <- high-emp
 dens <- density(contrast)
 x1 <- min(which(dens$x >= quantile(contrast, 0.05)))  
 x2 <- max(which(dens$x <  quantile(contrast, 0.95)))
-plot(dens, xlim = c(-0.6, 0.6), ylim = c(0,30), type="n", ann = FALSE, bty = "n", yaxt = "n")
+plot(dens, xlim = c(-0.15, 0.15), ylim = c(0,30), type="n", ann = FALSE, bty = "n", yaxt = "n")
 with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[5],alpha = 0.9), border = NA))
 
 x1 <- min(which(dens$x >= quantile(contrast, 0)))  
@@ -704,7 +704,7 @@ dens <- density(contrast)
 x1 <- min(which(dens$x >= quantile(contrast, 0.05)))  
 x2 <- max(which(dens$x <  quantile(contrast, 0.95)))
 par(new = TRUE)
-plot(dens, xlim = c(-0.6, 0.6), ylim = c(0,30), type="n", ann = FALSE, bty = "n", yaxt = "n")
+plot(dens, xlim = c(-0.15, 0.15), ylim = c(0,30), type="n", ann = FALSE, bty = "n", yaxt = "n")
 with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[6],alpha = 0.9), border = NA))
 
 x1 <- min(which(dens$x >= quantile(contrast, 0)))  
@@ -712,10 +712,10 @@ x2 <- max(which(dens$x <  quantile(contrast, 1)))
 with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[6],alpha = 0.2), border = NA))
 
 abline(v = 0, lty = 2, col = "lightgrey")
-text(-0.2, 28, "+20% \n migration", cex = 1.5, col = col.pal[5])
-text(0.2, 28, "-20% \n migration", cex = 1.5, col = col.pal[6])
+text(-0.06, 28, "+5% \n migration", cex = 1.5, col = col.pal[5])
+text(0.06, 28, "-5% \n migration", cex = 1.5, col = col.pal[6])
 mtext(expression("M -> CF"[ST]),side = 1, line = 3)
-mtext('d', side=3, line=1, at=-0.6)
+mtext('d', side=3, line=1, at=-0.15)
 
 #dev.off()
 
