@@ -12,6 +12,7 @@ setwd("~/GitHub/CulturalEvolutionWorkflow")
 
 library(parallel)
 library(RColorBrewer)
+library(scales)
 
 ### Functions
 
@@ -22,8 +23,8 @@ library(RColorBrewer)
 
 
 #Load real age trajectory for migration (based on Fedorova et al., 2022, The complex life course of mobility: Quantitative description of 300,000 residential moves in 1850-1950 Netherlands) ) 
-age_mig_NL <- readRDS("beta_df.RDS")$beta_mod_f
-max_age <- length(age_mig_NL)
+#age_mig_NL <- readRDS("beta_df.RDS")$beta_mod_f
+max_age <- 90 #length(age_mig_NL)
 
 #Define exponential function for age-dependent probabilities
 #We assume that both survival and the probability to update your variant decline as agents age
@@ -65,7 +66,7 @@ grid[Locations] <- sample(N_groups)
 # mu = 0.1        #Innovation rate (fraction of learning events that are innovations)
 # theta = 1.3            #Conformity parameter
 # dist = dist        # distance matrix for villages
-# r_dist  = 0.2      #Effect of distance on migration (if r_dist = 0, migrants choose village randomly, 0.1 seems to be good value for local migration)
+# r_dist  = 0      #Effect of distance on migration (if r_dist = 0, migrants choose village randomly, 0.1 seems to be good value for local migration)
 #'
 #' @return Fst = a vector of Fst values for the population at each timestep of N_steps
 
@@ -297,9 +298,9 @@ abc_loop_fst <- function(N = 3000,
                          N_mod = 30,       
                          m_NL = TRUE,    
                          m_const = 0.1,
-                         mu = seq(0, 0.1, 0.01),       
+                         mu = 0.05, #seq(0, 0.1, 0.01),       
                          theta = seq(0.5, 5, 0.5),           
-                         r_dist  = 0.2,
+                         r_dist  = 0,
                          reference_data = reference_data,
                          fst_compare = TRUE){
   
@@ -349,9 +350,9 @@ reference_data_mig_un <- mig_abm(N = 3000,
                                  N_mod = 30,       
                                  m_NL = FALSE,    
                                  m_const = 0.3,
-                                 mu = 0.1,       
+                                 mu = 0.05,       
                                  theta = 1,
-                                 r_dist  = 0.2)
+                                 r_dist  = 0)
 
 
 # vary conformity(theta) and migration rate(m_const) - we assume flat priors
@@ -369,15 +370,15 @@ N_burn_in_un <- rep(1000, n_comb)
 N_mod_un <- rep(30, n_comb)
 m_NL_un <- rep(FALSE, n_comb)
 
-m_seq_un <- seq(0, 1, 0.1)
+m_seq_un <- seq(0, 0.4, 0.1)
 m_const_un <- sample(m_seq_un, n_comb, replace = TRUE)
 
 mu_un <- rep(0.05, n_comb)
 
-theta_seq_un <- c(0.5, 0, 1, 3)
+theta_seq_un <- c(0.5, 1, 2, 3)
 theta_un <- sample(theta_seq_un, n_comb, replace = TRUE)
 
-r_dist_un <- rep(0.2, n_comb)
+r_dist_un <- rep(0, n_comb)
 fst_compare_un <- rep(TRUE, n_comb)
 
 jobs_fst_compare_mig_un <- data.frame(N_un, 
@@ -419,6 +420,8 @@ abc_fst_diff_mig_un <- mclapply(1:n_comb,
 abc_output_fst_mig_un <- list(abc_fst_diff_mig_un, jobs_fst_compare_mig_un, reference_data_mig_un)
 saveRDS(abc_output_fst_mig_un, file="abc_output_fst_mig_un.RDS")
 
+#abc_output_fst_mig_un <- readRDS("abc_output_fst_mig_un.RDS")
+
 
 ### ABC analysis for conformist transmission
 # generate reference Fst - i.e. data we collected in the field
@@ -429,10 +432,10 @@ reference_data_mig_c <- mig_abm(N = 3000,
                                 N_burn_in = 1000,
                                 N_mod = 30,       
                                 m_NL = FALSE,    
-                                m_const = 0.5,
+                                m_const = 0.1,
                                 mu = 0.1,       
-                                theta = 3,
-                                r_dist  = 0.2)
+                                theta = 2,
+                                r_dist  = 0)
 
 
 # vary conformity(theta) and migration rate(m_const) - we assume flat priors
@@ -447,15 +450,15 @@ N_burn_in_c <- rep(1000, n_comb)
 N_mod_c <- rep(30, n_comb)
 m_NL_c <- rep(FALSE, n_comb)
 
-m_seq_c <- seq(0, 1, 0.02)
+m_seq_c <- seq(0, 0.4, 0.1)
 m_const_c <- sample(m_seq_c, n_comb, replace = TRUE)
 
 mu_c <- rep(0.05, n_comb)
 
-theta_seq_c <- c(0.5, 0, 1, 3)
+theta_seq_c <- c(0.5, 1, 2, 3)
 theta_c <- sample(theta_seq_c, n_comb, replace = TRUE)
 
-r_dist_c <- rep(0.2, n_comb)
+r_dist_c <- rep(0, n_comb)
 fst_compare_c <- rep(TRUE, n_comb)
 
 jobs_fst_compare_mig_c <- data.frame(N_c, 
@@ -495,14 +498,11 @@ abc_fst_diff_mig_c <- mclapply(1:n_comb,
 abc_output_fst_mig_c <- list(abc_fst_diff_mig_c, jobs_fst_compare_mig_c, reference_data_mig_c)
 saveRDS(abc_output_fst_mig_c, file="abc_output_fst_mig_c.RDS")
 
+#abc_output_fst_mig_un <- readRDS("abc_output_fst_mig_un.RDS")
+
 
 ### Extracting posteriors with rejection algorithm
 
-# if loading abc result, uncomment here:
-#abc_output_fst_mig_un <- readRDS("abc_output_fst_mig.RDS")
-#reference_data_un <- abc_output_fst_mig[[3]]
-
-# Otherwise:
 # rejection algorithm
 # sort parameter combinations by fst differences, select 1000 "best" parameter combinations
 # this constitutes the joint posterior
@@ -520,12 +520,6 @@ abc_posterior_fst_mig_un <- output_ordered_abs_un[1:1000,]
 
 
 # and then the posterior for reference data with conformist transmission
-
-# if loading abc result, uncomment lines:
-#abc_output_fst_mig_c <- readRDS("abc_output_fst_mig_c.RDS")
-#reference_data_c <- abc_output_fst_mig_c[[3]]                
-
-#Otherwise
 comb_test_c <- as.data.frame(abc_output_fst_mig_c[[2]]) 
 comb_test_c$abc_diff <- unlist(abc_output_fst_mig_c[[1]])
 comb_test_c$absolute_diff <- abs(comb_test_c$abc_diff)
@@ -540,7 +534,7 @@ abc_posterior_fst_mig_c <- output_ordered_abs_c[1:1000,]
 # posterior prediction for reference data with unbiased transmission
 
 # posterior predictions to generate:
-post_pred_n <- 10
+post_pred_n <- 100
 post_pred_un <- list()
 
 for(i in 1:post_pred_n){
@@ -587,14 +581,51 @@ last_fst_c = unlist(lapply(post_pred_c, function(l) l[[1]][100]))
 # for unbiased reference dataset
 # NOTE: if posterior has not been calculated, it needs to be reloaded here
 
-# extract posterior for values for m = 0.3
-post_0.3 <- abc_posterior_fst_mig_un[which(abc_posterior_fst_mig_un$m_const == "0.3"),]
+# extract posterior for values for m = 0.2
+post_0.2 <- abc_posterior_fst_mig_un[which(abc_posterior_fst_mig_un$m_const_un == "0.2"),]
 
-# extract 100 values for m = 0.4
-post_0.4 <- abc_posterior_fst_mig_un[which(abc_posterior_fst_mig_un$m_const == "0.4"),]
+# extract 100 values for m = 0.3
+post_0.3 <- abc_posterior_fst_mig_un[which(abc_posterior_fst_mig_un$m_const_un == "0.3"),]
+
+post_0.1 <- post_0.2
+post_0.1$m_const_un <- post_0.1$m_const_un - 0.1
 
 # posterior predictions to generate:
 post_pred_n <- 100
+
+post_pred_0.1 <- list()
+
+for(i in 1:post_pred_n){
+  post_pred_0.1[[i]] <- mig_abm(   N = post_0.1$N_un[i],         
+                                   N_groups = post_0.1$N_groups_un[i],      
+                                   N_steps = post_0.1$N_steps_un[i],    
+                                   N_burn_in = post_0.1$N_burn_in_un[i],
+                                   N_mod = post_0.1$N_mod_un[i],       
+                                   m_NL = post_0.1$m_NL_un[i],    
+                                   m_const = post_0.1$m_const_un[i],
+                                   mu = post_0.1$mu_un[i],       
+                                   theta = post_0.1$theta_un[i], 
+                                   r_dist  = post_0.1$r_dist_un[i])
+  
+}
+
+
+post_pred_0.2 <- list()
+
+for(i in 1:post_pred_n){
+  post_pred_0.2[[i]] <- mig_abm(   N = post_0.2$N_un[i],         
+                                   N_groups = post_0.2$N_groups_un[i],      
+                                   N_steps = post_0.2$N_steps_un[i],    
+                                   N_burn_in = post_0.2$N_burn_in_un[i],
+                                   N_mod = post_0.2$N_mod_un[i],       
+                                   m_NL = post_0.2$m_NL_un[i],    
+                                   m_const = post_0.2$m_const_un[i],
+                                   mu = post_0.2$mu_un[i],       
+                                   theta = post_0.2$theta_un[i], 
+                                   r_dist  = post_0.2$r_dist_un[i])
+  
+}
+
 post_pred_0.3 <- list()
 
 for(i in 1:post_pred_n){
@@ -611,31 +642,33 @@ for(i in 1:post_pred_n){
   
 }
 
-post_pred_0.4 <- list()
+## for conformist reference dataset
+# extract posterior for values for m = 0.2
+post_0.2_c <- abc_posterior_fst_mig_c
+post_0.2_c$m_const_c <- post_0.2_c$m_const_c + 0.1
+
+post_0.3_c <- post_0.2_c
+post_0.3_c$m_const_c <- post_0.3_c$m_const_c + 0.1
+
+
+# posterior predictions to generate:
+post_pred_n <- 100
+post_pred_0.2_c <- list()
 
 for(i in 1:post_pred_n){
-  post_pred_0.4[[i]] <- mig_abm(   N = post_0.4$N_un[i],         
-                                   N_groups = post_0.4$N_groups_un[i],      
-                                   N_steps = post_0.4$N_steps_un[i],    
-                                   N_burn_in = post_0.4$N_burn_in_un[i],
-                                   N_mod = post_0.4$N_mod_un[i],       
-                                   m_NL = post_0.4$m_NL_un[i],    
-                                   m_const = post_0.4$m_const_un[i],
-                                   mu = post_0.4$mu_un[i],       
-                                   theta = post_0.4$theta_un[i], 
-                                   r_dist  = post_0.4$r_dist_un[i])
+  post_pred_0.2_c[[i]] <- mig_abm(   N = post_0.2_c$N_c[i],         
+                                     N_groups = post_0.2_c$N_groups_c[i],      
+                                     N_steps = post_0.2_c$N_steps_c[i],    
+                                     N_burn_in = post_0.2_c$N_burn_in_c[i],
+                                     N_mod = post_0.2_c$N_mod_c[i],       
+                                     m_NL = post_0.2_c$m_NL_c[i],    
+                                     m_const = post_0.2_c$m_const_c[i],
+                                     mu = post_0.2_c$mu_c[i],       
+                                     theta = post_0.2_c$theta_c[i], 
+                                     r_dist  = post_0.2_c$r_dist_c[i])
   
 }
 
-## for conformist reference dataset
-# extract posterior for values for m = 0.3
-post_0.3_c <- abc_posterior_fst_mig_c[which(abc_posterior_fst_mig_c$m_const == "0.3"),]
-
-# extract 100 values for m = 0.4
-post_0.4_c <- abc_posterior_fst_mig_c[which(abc_posterior_fst_mig_c$m_const == "0.4"),]
-
-# posterior predictions to generate:
-post_pred_n <- 20
 post_pred_0.3_c <- list()
 
 for(i in 1:post_pred_n){
@@ -652,35 +685,26 @@ for(i in 1:post_pred_n){
   
 }
 
-post_pred_0.4_c <- list()
-
-for(i in 1:post_pred_n){
-  post_pred_0.4_c[[i]] <- mig_abm(   N = post_0.4_c$N_c[i],         
-                                     N_groups = post_0.4_c$N_groups_c[i],      
-                                     N_steps = post_0.4_c$N_steps_c[i],    
-                                     N_burn_in = post_0.4_c$N_burn_in_c[i],
-                                     N_mod = post_0.4_c$N_mod_c[i],       
-                                     m_NL = post_0.4_c$m_NL_c[i],    
-                                     m_const = post_0.4_c$m_const_c[i],
-                                     mu = post_0.4_c$mu_c[i],       
-                                     theta = post_0.4_c$theta_c[i], 
-                                     r_dist  = post_0.4_c$r_dist_c[i])
-  
-}
 
 
-contrast_runs <- list(post_pred_0.3, post_pred_0.3_c, post_pred_0.4, post_pred_0.4_c)
+contrast_runs <- list(post_pred_0.1, post_pred_0.2,  post_pred_0.3, post_pred_c, post_pred_0.2_c, post_pred_0.3_c)
 saveRDS(contrast_runs, file = "contrast_runs.RDS")
 
+last_fst_un_0.1 = unlist(lapply(post_pred_0.1, function(l) l[[1]][100]))
+last_fst_un_0.2 = unlist(lapply(post_pred_0.2, function(l) l[[1]][100]))
 last_fst_un_0.3 = unlist(lapply(post_pred_0.3, function(l) l[[1]][100]))
-last_fst_un_0.4 = unlist(lapply(post_pred_0.4, function(l) l[[1]][100]))
+
+last_fst_c_0.1 = unlist(lapply(post_pred_c, function(l) l[[1]][100]))
+last_fst_c_0.2 = unlist(lapply(post_pred_0.2_c, function(l) l[[1]][100]))
 last_fst_c_0.3 = unlist(lapply(post_pred_0.3_c, function(l) l[[1]][100]))
-last_fst_c_0.4 = unlist(lapply(post_pred_0.4_c, function(l) l[[1]][100]))
 
 
-# get diff
-diff_un <- last_fst_un_0.3 - last_fst_un_0.4
-diff_c <- last_fst_c_0.3 - last_fst_c_0.4
+
+# calculate effect, get diff
+diff_un_up <- last_fst_un_0.3 - last_fst_un_0.2
+diff_un_down <- last_fst_un_0.1 - last_fst_un_0.2
+diff_c_up <-  last_fst_c_0.3 - last_fst_c_0.2
+diff_c_down <- last_fst_c_0.1 - last_fst_c_0.2 
 
 
 
@@ -689,17 +713,48 @@ diff_c <- last_fst_c_0.3 - last_fst_c_0.4
 # note: plot is hard coded to the particular simulation run coded here
 # changes will need to be made to axis if code is changed
 
-mypalette <- mypalette<-brewer.pal(9,"Reds")
-
-post_tab_un <- table(abc_posterior_fst_mig_un$m_const, abc_posterior_fst_mig_un$theta)
+# matrices for joint posterior
+post_tab_un <- table(abc_posterior_fst_mig_un$m_const_un, abc_posterior_fst_mig_un$theta_un)
 post_tab_un <- as.matrix(post_tab_un)
 
-post_tab_c <- table(abc_posterior_fst_mig_c$m_const, abc_posterior_fst_mig_c$theta)
+# adding rows and columns not represented in posterior for visualisation
+post_tab_un <- cbind(post_tab_un, rep(0, nrow(post_tab_un)))
+colnames(post_tab_un)[3] <- ("2")
+
+post_tab_un <- cbind(post_tab_un, rep(0, nrow(post_tab_un)))
+colnames(post_tab_un)[4] <- ("3")
+
+post_tab_un <- rbind(rep(0, ncol(post_tab_un)), post_tab_un)
+rownames(post_tab_un)[1] <- ("0.1")
+
+post_tab_un <- rbind(post_tab_un, rep(0, ncol(post_tab_un)) )
+rownames(post_tab_un)[4] <- ("0.4")
+
+
+# conformist 
+
+post_tab_c <- table(abc_posterior_fst_mig_c$m_const_c, abc_posterior_fst_mig_c$theta_c)
 post_tab_c <- as.matrix(post_tab_c)
 
+# set zeros for param values not captured in posterior 
+
+post_tab_c <- cbind(rep(0, nrow(post_tab_c)), post_tab_c)
+colnames(post_tab_c)[1] <- ("1")
+
+post_tab_c <- cbind(rep(0, nrow(post_tab_c)), post_tab_c)
+colnames(post_tab_c)[1] <- ("0.5")
+
+mat_nul <- matrix(data = 0, ncol = 4, nrow = 3)
+
+post_tab_c <- rbind(post_tab_c, mat_nul)
+rownames(post_tab_c)[2:4] <- c("0.2", "0.3", "0.4")
 
 
-png(filename = "abc_result.png", width = 18, height = 10, units = "cm", res = 500)
+
+mypalette <- brewer.pal(4,"Reds")
+col.pal <- colorRampPalette(brewer.pal(9, "Set1"))(N_groups)
+
+png(filename = "abc_result.png", width = 18, height = 15, units = "cm", res = 500)
 
 par(mfrow = c(2,3),
     mar = c(4,4,3,3),
@@ -708,65 +763,82 @@ par(mfrow = c(2,3),
 # unbiased transmission dataset
 image(t(post_tab_un), 
       col = mypalette,
-      xlab = "Conformity exponent",
-      ylab = "Migration rate",
+      xlab = expression(paste("Conformity exponent", ~theta)),
+      ylab = substitute(paste("Migration rate", italic(~"m"))),
       xaxt = "n",
       yaxt = "n")
-axis(1, at = c(0, 0.5, 1))
-axis(2, at = c(0, 0.35, 0.7, 1.05), labels = c(0.2, 0.3, 0.4, 0.5))
-mtext("a", side = 3, line = 1, at = -0.5)
-points(x = 1, y = 0.3, cex = 2, pch = 19)
+axis(1, at = c(0, 0.33, 0.66, 1), labels = c(0.5, 1, 2, 3))
+axis(2, at = c(0, 0.33, 0.66, 1), labels = c(0.1, 0.2, 0.3, 0.4))
+mtext("a", side = 3, line = 1, at = -0.33)
+points(x = 0.33, y = 0.66, cex = 2, pch = 19)
+text(0, 0.33, "66.3%", col = "white")
+grid(4,4)
+
 
 plot(density(last_fst_un),
      bty = "n",
      col = "red3",
      lwd = 2,
      main = "",
-     xlim = c(0.019,0.025),
-     xlab = "Cultural Fst")
-abline(v = reference_data_mig_un[[1]][100], lty = 2, lwd = 2)
-mtext("b", side = 3, line = 1, at = 0.0165)
+     xlim = c(0.019,0.027),
+     xlab = expression('CF'[ST]))
+abline(v = reference_data_un[[1]][100], lty = 2, lwd = 2)
+mtext("b", side = 3, line = 1, at = 0.018)
 
 
-plot(density(diff_un),
+plot(x = rep(0,600), y = 1:600, type = "l", lty = 2,
      bty = "n",
-     col = "red3",
      lwd = 2,
      main = "",
-     #xlim = c(0.019,0.025),
-     xlab = "M -> CFst")
-abline(v = 0, lty = 2, lwd = 2)
+     xlim = c(-0.0085,0.01),
+     ylim = c(0,600),
+     yaxt = "n",
+     ylab = "",
+     xlab = expression('M -> CF'[ST]))
+polygon(density(diff_un_up), col = alpha(col.pal[6],alpha = 0.2))
+polygon(density(diff_un_down), col = alpha(col.pal[5],alpha = 0.2))
 mtext("c", side = 3, line = 1, at = -0.005)
+text(x =-0.006, y= 500, labels = "+10% \n migration", cex =0.9, col = col.pal[6])
+text(x =0.006, y= 500, labels = "-10% \n migration", cex =0.9, col = col.pal[5])
 
 ## conformist reference dataset
 image(t(post_tab_c), 
       col = mypalette,
-      xlab = "Conformity exponent",
-      ylab = "Migration rate",
+      xlab = expression(paste("Conformity exponent", ~theta)),
+      ylab = substitute(paste("Migration rate", italic(~"m"))),
       xaxt = "n",
       yaxt = "n")
-axis(1, at = c(0, 1), labels = c(2, 3))
-axis(2, at = c(0,0.4583334,1), labels = c(0.14, 0.36, 0.6))
-mtext("d", side = 3, line = 1, at = -0.8)
-points(x = 1, y = 0.76, cex = 2, pch = 19)
+axis(1, at = c(0, 0.33, 0.66, 1), labels = c(0.5, 1, 2, 3))
+axis(2, at = c(0, 0.33, 0.66, 1), labels = c(0.1, 0.2, 0.3, 0.4))
+mtext("d", side = 3, line = 1, at = -0.33)
+points(x = 0.66, y = 0, cex = 2, pch = 19)
+text(1, 0, "78.6%", col = "white")
+grid(4,4)
 
 plot(density(last_fst_c),
      bty = "n",
      col = "red3",
      lwd = 2,
      main = "",
-     xlab = "Cultural Fst")
-abline(v = reference_data_mig_c[[1]][100], lty = 2, lwd = 2)
-mtext("e", side = 3, line = 1, at = -0.19)
+     xlab = expression('CF'[ST]))
+abline(v = reference_data_c[[1]][100], lty = 2, lwd = 2)
+mtext("e", side = 3, line = 1, at = 0.625)
 
-plot(density(diff_c),
+plot(x = rep(0,100), y = 1:100, type = "l", lty = 2,
      bty = "n",
-     col = "red3",
      lwd = 2,
      main = "",
-     xlab = "M -> CFst")
-abline(v = 0, lty = 2, lwd = 2)
-mtext("f", side = 3, line = 1, at = -0.13)
+     xlim = c(-0.3,0.35),
+     ylim = c(0,20),
+     yaxt = "n",
+     ylab = "",
+     xlab = expression('M -> CF'[ST]))
+polygon(density(diff_c_up), col = alpha(col.pal[6],alpha = 0.2))
+polygon(density(diff_c_down), col = alpha(col.pal[5],alpha = 0.2))
+mtext("f", side = 3, line = 1, at = -0.23)
+text(x =-0.15, y= 15, labels = "+10% \n migration", cex =0.9, col = col.pal[6])
+text(x =0.25, y= 16, labels = "-10% \n migration", cex =0.9, col = col.pal[5])
 
 
 dev.off()
+
