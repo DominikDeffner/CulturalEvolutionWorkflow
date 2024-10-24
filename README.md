@@ -2,7 +2,7 @@
 
 This repository contains the scripts to reproduce all results and plots for the workflow examples in 
 
-***Deffner, D., Fedorova, N., Andrews, J. & McElreath, R. (submitted) Bridging theory and data: A computational workflow for cultural evolution***
+***Deffner, D., Fedorova, N., Andrews, J. & McElreath, R. (in press) Bridging theory and data: A computational workflow for cultural evolution. PNAS***
 
 ***Workflow examples***
 - Moving from DAGS to data: "DAGstoData.R" simulates synthetic data for 30 different countries based on the DAG in Fig.2b, performs a power analysis varying the amount of unexplained variation and the effect size, and computes the causal effect of changing M on D (result plots can be found in "DAGstoData_Plots" folder).
