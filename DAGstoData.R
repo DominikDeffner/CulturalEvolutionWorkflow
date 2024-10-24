@@ -63,10 +63,14 @@ levelplot(m, xlab = "Unexplained variance (Sigma)", ylab ="Effect of migration [
 
 #########################
 ###### CAUSAL EFFECT ####
-##### Here, we use MCMC with stan through the rethinking package
+# To compute a causal effect, we first need to fit a model closing all backdoor paths. Then we simulate
+# values for cultural diversity, setting migration to a specific value. Causal effects also marginalize,
+# or "average", over other relevant causes (here conformity).
 
+#Simulate data
 dat <- sim_dat(1, 1)
 
+##### Here, we use MCMC with stan through the rethinking package
 m <- ulam(
   alist(
     D ~ dnorm( mu , sigma ) ,
@@ -74,46 +78,36 @@ m <- ulam(
     c(a,bmd,bcd) ~ dnorm( 0 , 1 ) ,
     sigma ~ dexp( 1 )
   ) , data=dat , chains=4, iter = 3000 )
+
+#Extract samples from the posterior
 s <- extract_post_ulam(m)
 
-#Compute causal effect of migration on diversity
+#Compute causal effect of migration on diversity, marginalizing (i.e., averaging over) the values of conformity in the sample.
 N = length(s$sigma)
-Causal_effect <- matrix(NA, 3,N)
-for (i in 1:3) {
-  C <- c(-1, 0, 1)[i]
-  Causal_effect[i,] <- rnorm(N, s$a+ s$bcd*C + s$bmd * 1, s$sigma) - rnorm(N, s$a+ s$bcd*C + s$bmd * (-1), s$sigma)
-}
+Causal_effect <- rep(NA, N)
 
+#Sample conformity values from the "empirical" distribution
+Cs <- sample(dat$C, N, replace = TRUE)
+
+#Simulate interventions, averaging over the effect of conformity
+Causal_effect <- rnorm(N, s$a+ s$bcd*Cs + s$bmd * 1, s$sigma) - rnorm(N, s$a+ s$bcd*Cs + s$bmd * (-1), s$sigma)
+
+
+#graphics.off()
+#pdf("DAGstoDataEffect.pdf", width = 4, height = 4)
 par(mar = c(2,0,0,0), oma = rep(1,4))
 col.pal <- brewer.pal(9, "Set1")
-dens <- density(Causal_effect[1,])
-x1 <- min(which(dens$x >= quantile(Causal_effect[1,], 0.05)))  
-x2 <- max(which(dens$x <  quantile(Causal_effect[1,], 0.95)))
+dens <- density(Causal_effect)
+x1 <- min(which(dens$x >= quantile(Causal_effect, 0.05)))  
+x2 <- max(which(dens$x <  quantile(Causal_effect, 0.95)))
 plot(dens, xlim = c(-4, 8), ylim = c(0,0.4), type="n", ann = FALSE, bty = "n", yaxt = "n")
 with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[1],alpha = 0.9), border = NA))
 
-x1 <- min(which(dens$x >= quantile(Causal_effect[1,], 0)))  
-x2 <- max(which(dens$x <  quantile(Causal_effect[1,], 1)))
+x1 <- min(which(dens$x >= quantile(Causal_effect, 0)))  
+x2 <- max(which(dens$x <  quantile(Causal_effect, 1)))
 with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[1],alpha = 0.2), border = NA))
 
-dens <- density(Causal_effect[2,])
-x1 <- min(which(dens$x >= quantile(Causal_effect[2,], 0.05)))  
-x2 <- max(which(dens$x <  quantile(Causal_effect[2,], 0.95)))
-with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[2],alpha = 0.9), border = NA))
-
-x1 <- min(which(dens$x >= quantile(Causal_effect[2,], 0)))  
-x2 <- max(which(dens$x <  quantile(Causal_effect[2,], 1)))
-with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[2],alpha = 0.2), border = NA))
-
-dens <- density(Causal_effect[3,])
-x1 <- min(which(dens$x >= quantile(Causal_effect[3,], 0.05)))  
-x2 <- max(which(dens$x <  quantile(Causal_effect[3,], 0.95)))
-with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[3],alpha = 0.9), border = NA))
-
-x1 <- min(which(dens$x >= quantile(Causal_effect[3,], 0)))  
-x2 <- max(which(dens$x <  quantile(Causal_effect[3,], 1)))
-with(dens, polygon(x=c(x[c(x1,x1:x2,x2)]), y= c(0, y[x1:x2], 0), col=alpha(col.pal[3],alpha = 0.2), border = NA))
-abline(v = 0, lty = 2, col = "lightgrey")
-legend("topleft", title = expression("Level of Conformity"), c("-1","0","1"), col = c(col.pal[1],col.pal[2],col.pal[3]), cex = 1.2, bty = "n", lwd = 6, lty = 1)
 mtext(side = 1, line = 2, "M -> D", cex = 1.2)
-mtext(side = 3, line = 1, "Causal Effects", cex = 1.2)
+mtext(side = 3, line = -2, "Causal effect of M on D
+      (marginalizing over C)", cex = 1)
+#dev.off()
