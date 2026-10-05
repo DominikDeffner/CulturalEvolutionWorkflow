@@ -150,7 +150,7 @@ mig_abm <- function(N = 3000,
       
       #Set childrens' ages to 1 and increase rest by 1
       Age[idx_group[babies]] <- 1
-      Age[idx_group[-babies]] <- Age[idx_group[-babies]] + 1
+      Age[idx_group[alive == 1]] <- Age[idx_group[alive == 1]] + 1
     }
     
     if (t > N_burn_in){

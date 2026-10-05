@@ -48,7 +48,7 @@ for(i in 1:nrow(sweep)){
   est <- c() # intalize a vector for storing the data
   
   for(j in 1:length(data)){
-    estimate <- coef(summary(lm(D ~ M + C, data[[i]])))["M", "Estimate"]
+    estimate <- coef(summary(lm(D ~ M + C, data[[j]])))["M", "Estimate"]
     est <- c(est, estimate)
     error <- c(error, log(abs(estimate/sweep[i, 1] ) )) # Calculate the log error in the estimates. 
   }  

@@ -114,7 +114,7 @@ sim.funct <- function(N_steps, Nsim, theta, const_m){
         
         #Set children ages to 1 and increase rest by 1
         Age[idx_group[babies]] <- 1
-        Age[idx_group[-babies]] <- Age[idx_group[-babies]] + 1
+        Age[idx_group[alive == 1]] <- Age[idx_group[alive == 1]] + 1
       }
       
       #If we're past the burn in, we include migration and cultural transmission

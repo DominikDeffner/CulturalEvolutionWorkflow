@@ -150,7 +150,7 @@ for (t in 1: (N_burn_in + N_skip + N_steps ) ){
     
     #Set childrens' ages to 1 and increase rest by 1
     Age[idx_group[babies]] <- 1
-    Age[idx_group[-babies]] <- Age[idx_group[-babies]] + 1
+    Age[idx_group[alive == 1]] <- Age[idx_group[alive == 1]] + 1
   }
   
   if (t > N_burn_in){
@@ -305,8 +305,11 @@ keep <- rep(-10, N_record*N_steps)
 
 #Loop over individuals
 for (i in 1:N_record) {
-  for (t in 2:N_steps) {
-    
+  
+   #Assign group for t=1 to prevent issue with migration events
+   group[which(id==i)][1] <- dat_group[i, t]
+  
+   for (t in 2:N_steps) {
     keep[which(id==i)][t] <- ifelse(is.na(dat_trait[i, t]), 0, 1)
     group[which(id==i)][t] <- dat_group[i, t]
     migrate[which(id==i)][t] <-ifelse(group[which(id==i)][t-1] == group[which(id==i)][t], 0, 1)
@@ -337,10 +340,7 @@ for (i in 1:N_record) {
 }
 
 
-
-
 #Stan data
-
 stan.data <- list(choices = choices[keep == 1],
                   innovate  = innovate[keep == 1],
                   migrate  = migrate[keep == 1],
@@ -464,7 +464,7 @@ sim.funct <- function(N_steps, Nsim, sample, m_in){
         
         #Set children ages to 1 and increase rest by 1
         Age[idx_group[babies]] <- 1
-        Age[idx_group[-babies]] <- Age[idx_group[-babies]] + 1
+        Age[idx_group[alive == 1]] <- Age[idx_group[alive == 1]] + 1
       }
       
       #If we're past the burn in, we include migration and cultural transmission
