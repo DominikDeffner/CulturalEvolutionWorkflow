@@ -307,7 +307,7 @@ keep <- rep(-10, N_record*N_steps)
 for (i in 1:N_record) {
   
    #Assign group for t=1 to prevent issue with migration events
-   group[which(id==i)][1] <- dat_group[i, t]
+   group[which(id==i)][1] <- dat_group[i, 1]
   
    for (t in 2:N_steps) {
     keep[which(id==i)][t] <- ifelse(is.na(dat_trait[i, t]), 0, 1)
