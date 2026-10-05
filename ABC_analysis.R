@@ -782,7 +782,7 @@ plot(density(last_fst_un),
      main = "",
      xlim = c(0.019,0.027),
      xlab = expression('CF'[ST]))
-abline(v = reference_data_un[[1]][100], lty = 2, lwd = 2)
+abline(v = reference_data_mig_un[[1]][100], lty = 2, lwd = 2)
 mtext("b", side = 3, line = 1, at = 0.018)
 
 
@@ -821,7 +821,7 @@ plot(density(last_fst_c),
      lwd = 2,
      main = "",
      xlab = expression('CF'[ST]))
-abline(v = reference_data_c[[1]][100], lty = 2, lwd = 2)
+abline(v = reference_data_mig_c[[1]][100], lty = 2, lwd = 2)
 mtext("e", side = 3, line = 1, at = 0.625)
 
 plot(x = rep(0,100), y = 1:100, type = "l", lty = 2,
